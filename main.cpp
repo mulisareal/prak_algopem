@@ -48,9 +48,9 @@ void inisialisasiData() {
     jumlahBukuAktif = 4;
 
     // Data Pengguna (Nama, Poin)
-    namaPengguna[0] = "Alice"; poinPengguna[0] = 50;
-    namaPengguna[1] = "Bob"; poinPengguna[1] = 10;
-    namaPengguna[2] = "Charlie"; poinPengguna[2] = 120;
+    namaPengguna[0] = "Mulisa"; poinPengguna[0] = 50;
+    namaPengguna[1] = "Atmim"; poinPengguna[1] = 10;
+    namaPengguna[2] = "Sabrina"; poinPengguna[2] = 120;
     jumlahUserAktif = 3;
 
     cout << "Data inisialisasi berhasil dimuat.\n";
