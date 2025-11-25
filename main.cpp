@@ -21,6 +21,7 @@ string judulBuku[MAX_BUKU]; // Array 1D: Judul (Data Kelompok)
 int dataBuku[MAX_BUKU][3];  // Array 2D: [Stok, Dipinjam, PoinPinjam]
 string namaPengguna[MAX_USER]; // Array 1D: Nama Pengguna
 int poinPengguna[MAX_USER];    // Array 1D: Poin Pengguna
+int riwayatPeminjaman[MAX_USER][MAX_BUKU]; // Array 2D: [Index User, Index Buku]
 
 // Counter untuk melacak jumlah data yang terisi
 int jumlahBukuAktif = 0;
@@ -52,6 +53,13 @@ void inisialisasiData() {
     namaPengguna[1] = "Atmim"; poinPengguna[1] = 10;
     namaPengguna[2] = "Sabrina"; poinPengguna[2] = 120;
     jumlahUserAktif = 3;
+
+    // Set semua nilai awal = 0
+    for(int i=0; i<MAX_USER; i++) {
+        for(int j=0; j<MAX_BUKU; j++) {
+            riwayatPeminjaman[i][j] = 0;
+        }
+    }
 
     cout << "Data inisialisasi berhasil dimuat.\n";
 }
@@ -114,21 +122,29 @@ void tampilkanDaftarBuku() {
  * @param idxBuku Index buku yang dipinjam (By Value)
  * @param poinPengguna Pointer ke array poin pengguna (By Reference)
  */
-void peminjamanBuku(const string& namaPeminjam, int idxBuku, int& poinUser) {
-    // Kriteria A: Aturan/Kebijakan (Percabangan)
+void peminjamanBuku(const string& namaPeminjam, int idxUser, int idxBuku, int& poinUser) {
+    
+    // Validasi 1: Cek Stok
     if (dataBuku[idxBuku][KOLOM_STOK] > 0) {
-        // Kurangi Stok Buku
-        dataBuku[idxBuku][KOLOM_STOK]--;
-        // Tambah Jumlah Dipinjam
-        dataBuku[idxBuku][KOLOM_DIPINJAM]++;
-        // Tambah Poin Pengguna
-        poinUser += dataBuku[idxBuku][KOLOM_POIN];
+        
+        // Validasi 2: Cek apakah user SUDAH meminjam buku yang sama?
+        if (riwayatPeminjaman[idxUser][idxBuku] == 1) {
+             cout << "\n[GAGAL] Anda sedang meminjam buku ini. Kembalikan dulu sebelum meminjam lagi.\n";
+        } else {
+            // PROSES PEMINJAMAN
+            dataBuku[idxBuku][KOLOM_STOK]--;
+            dataBuku[idxBuku][KOLOM_DIPINJAM]++;
+            poinUser += dataBuku[idxBuku][KOLOM_POIN];
 
-        cout << "\n[BERHASIL] Peminjaman sukses!\n";
-        cout << "  - " << namaPeminjam << " meminjam: " << judulBuku[idxBuku] << "\n";
-        cout << "  - Anda mendapatkan +" << dataBuku[idxBuku][KOLOM_POIN] << " Poin!\n";
-        cout << "  - Total Poin Anda saat ini: " << poinUser << "\n";
-        cout << "  - Sisa Stok " << judulBuku[idxBuku] << ": " << dataBuku[idxBuku][KOLOM_STOK] << "\n";
+            // Catat bahwa User ini meminjam Buku ini
+            riwayatPeminjaman[idxUser][idxBuku] = 1; 
+
+            cout << "\n[BERHASIL] Peminjaman sukses!\n";
+            cout << "  - " << namaPeminjam << " meminjam: " << judulBuku[idxBuku] << "\n";
+            cout << "  - Anda mendapatkan +" << dataBuku[idxBuku][KOLOM_POIN] << " Poin!\n";
+            cout << "  - Total Poin Anda saat ini: " << poinUser << "\n";
+            cout << "  - Sisa Stok " << judulBuku[idxBuku] << ": " << dataBuku[idxBuku][KOLOM_STOK] << "\n";
+        }
     } else {
         cout << "\n[GAGAL] Stok buku '" << judulBuku[idxBuku] << "' habis!\n"; // Flowchart: 'Stok habis'
     }
@@ -140,11 +156,14 @@ void peminjamanBuku(const string& namaPeminjam, int idxBuku, int& poinUser) {
  * @param idxBuku Index buku yang dikembalikan (By Value)
  * @param poinPengguna Pointer ke array poin pengguna (By Reference)
  */
-void pengembalianBuku(const string& namaPengembali, int idxBuku, int& poinUser) {
+void pengembalianBuku(const string& namaPengembali, int idxUser, int idxBuku, int& poinUser) {
+    // Cek apakah user benar-benar meminjam buku ini?
+    if (riwayatPeminjaman[idxUser][idxBuku] == 1) {
     // Kriteria A: Aturan/Kebijakan (Percabangan)
-    if (dataBuku[idxBuku][KOLOM_STOK] < MAX_STOK) {
-        // Tambah Stok Buku
-        dataBuku[idxBuku][KOLOM_STOK]++;
+        if (dataBuku[idxBuku][KOLOM_STOK] < MAX_STOK) {
+            // Tambah Stok Buku
+            dataBuku[idxBuku][KOLOM_STOK]++;
+        }
         // Kurangi Jumlah Dipinjam (Asumsi buku ini sebelumnya dipinjam)
         if (dataBuku[idxBuku][KOLOM_DIPINJAM] > 0) {
             dataBuku[idxBuku][KOLOM_DIPINJAM]--;
@@ -152,6 +171,9 @@ void pengembalianBuku(const string& namaPengembali, int idxBuku, int& poinUser) 
         // Tambah Poin Pengguna (Gamifikasi)
         poinUser += 5; // Poin tambahan untuk pengembalian tepat waktu
         
+        // Hapus status peminjaman (Set jadi 0)
+        riwayatPeminjaman[idxUser][idxBuku] = 0;
+
         cout << "\n[BERHASIL] Pengembalian sukses!\n";
         cout << "  - " << judulBuku[idxBuku] << " berhasil dikembalikan oleh " << namaPengembali << ".\n";
         cout << "  - Anda mendapatkan +5 Poin tambahan!\n";
@@ -159,6 +181,9 @@ void pengembalianBuku(const string& namaPengembali, int idxBuku, int& poinUser) 
         cout << "  - Stok " << judulBuku[idxBuku] << " kini: " << dataBuku[idxBuku][KOLOM_STOK] << "\n";
     } else {
         cout << "\n[WARNING] Stok buku sudah penuh (" << MAX_STOK << "). Tidak perlu penambahan.\n"; // Flowchart: 'Stok sudah penuh'
+        // Jika user tidak pernah meminjam buku ini
+        cout << "\n[GAGAL] Validasi Ditolak!\n";
+        cout << "Data mencatat bahwa " << namaPengembali << " TIDAK sedang meminjam buku ini.\n";
     }
 }
 
@@ -268,7 +293,7 @@ int main() {
                 
                 if (idxBuku != -1 && idxUser != -1) {
                     // Panggil fungsi Peminjaman (dengan parameter by reference untuk Poin Pengguna)
-                    peminjamanBuku(inputNamaUser, idxBuku, poinPengguna[idxUser]);
+                    peminjamanBuku(inputNamaUser, idxUser, idxBuku, poinPengguna[idxUser]);
                 } else if (idxBuku == -1) {
                     cout << "[ERROR] Buku dengan judul '" << inputJudul << "' tidak ditemukan.\n";
                 } else if (idxUser == -1) {
@@ -288,7 +313,7 @@ int main() {
                 
                 if (idxBuku != -1 && idxUser != -1) {
                     // Panggil fungsi Pengembalian (dengan parameter by reference untuk Poin Pengguna)
-                    pengembalianBuku(inputNamaUser, idxBuku, poinPengguna[idxUser]);
+                    pengembalianBuku(inputNamaUser, idxUser, idxBuku, poinPengguna[idxUser]);
                 } else if (idxBuku == -1) {
                     cout << "[ERROR] Buku dengan judul '" << inputJudul << "' tidak ditemukan.\n";
                 } else if (idxUser == -1) {
