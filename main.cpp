@@ -21,7 +21,10 @@ string judulBuku[MAX_BUKU]; // Array 1D: Judul (Data Kelompok)
 int dataBuku[MAX_BUKU][3];  // Array 2D: [Stok, Dipinjam, PoinPinjam]
 string namaPengguna[MAX_USER]; // Array 1D: Nama Pengguna
 int poinPengguna[MAX_USER];    // Array 1D: Poin Pengguna
-int riwayatPeminjaman[MAX_USER][MAX_BUKU]; // Array 2D: [Index User, Index Buku]
+
+// Matrix Riwayat: Baris = Index User, Kolom = Index Buku
+// Nilai 0 = Tidak Pinjam, 1 = Sedang Pinjam
+int riwayatPeminjaman[MAX_USER][MAX_BUKU]; 
 
 // Counter untuk melacak jumlah data yang terisi
 int jumlahBukuAktif = 0;
@@ -54,9 +57,9 @@ void inisialisasiData() {
     namaPengguna[2] = "Sabrina"; poinPengguna[2] = 120;
     jumlahUserAktif = 3;
 
-    // Set semua nilai awal = 0
-    for(int i=0; i<MAX_USER; i++) {
-        for(int j=0; j<MAX_BUKU; j++) {
+    // Inisialisasi Riwayat Peminjaman (Semua 0)
+    for(int i = 0; i < MAX_USER; i++){
+        for(int j = 0; j < MAX_BUKU; j++){
             riwayatPeminjaman[i][j] = 0;
         }
     }
@@ -119,55 +122,64 @@ void tampilkanDaftarBuku() {
 /**
  * @brief Memproses peminjaman buku. (Fitur 2)
  * @param namaPeminjam Parameter by Value
+ * @param idxUser Index pengguna (untuk validasi matrix)
  * @param idxBuku Index buku yang dipinjam (By Value)
  * @param poinPengguna Pointer ke array poin pengguna (By Reference)
  */
 void peminjamanBuku(const string& namaPeminjam, int idxUser, int idxBuku, int& poinUser) {
     
-    // Validasi 1: Cek Stok
-    if (dataBuku[idxBuku][KOLOM_STOK] > 0) {
-        
-        // Validasi 2: Cek apakah user SUDAH meminjam buku yang sama?
-        if (riwayatPeminjaman[idxUser][idxBuku] == 1) {
-             cout << "\n[GAGAL] Anda sedang meminjam buku ini. Kembalikan dulu sebelum meminjam lagi.\n";
-        } else {
-            // PROSES PEMINJAMAN
+    // Validasi apakah user sudah meminjam buku yang sama?
+    if (riwayatPeminjaman[idxUser][idxBuku] == 1) {
+        cout << "\n[GAGAL] Anda sedang meminjam buku ini. Kembalikan dulu sebelum meminjam lagi.\n";
+    } else {
+        // Kriteria A: Aturan/Kebijakan (Percabangan)
+        if (dataBuku[idxBuku][KOLOM_STOK] > 0) {
+            // Kurangi Stok Buku
             dataBuku[idxBuku][KOLOM_STOK]--;
+            // Tambah Jumlah Dipinjam
             dataBuku[idxBuku][KOLOM_DIPINJAM]++;
+            // Tambah Poin Pengguna
             poinUser += dataBuku[idxBuku][KOLOM_POIN];
 
-            // Catat bahwa User ini meminjam Buku ini
-            riwayatPeminjaman[idxUser][idxBuku] = 1; 
+            // Catat di Matrix Riwayat
+            riwayatPeminjaman[idxUser][idxBuku] = 1;
 
             cout << "\n[BERHASIL] Peminjaman sukses!\n";
             cout << "  - " << namaPeminjam << " meminjam: " << judulBuku[idxBuku] << "\n";
             cout << "  - Anda mendapatkan +" << dataBuku[idxBuku][KOLOM_POIN] << " Poin!\n";
             cout << "  - Total Poin Anda saat ini: " << poinUser << "\n";
             cout << "  - Sisa Stok " << judulBuku[idxBuku] << ": " << dataBuku[idxBuku][KOLOM_STOK] << "\n";
+        } else {
+            cout << "\n[GAGAL] Stok buku '" << judulBuku[idxBuku] << "' habis!\n"; // Flowchart: 'Stok habis'
         }
-    } else {
-        cout << "\n[GAGAL] Stok buku '" << judulBuku[idxBuku] << "' habis!\n"; // Flowchart: 'Stok habis'
     }
 }
 
 /**
  * @brief Memproses pengembalian buku. (Fitur 3)
  * @param namaPengembali Parameter by Value
+ * @param idxUser Index pengguna (untuk validasi matrix)
  * @param idxBuku Index buku yang dikembalikan (By Value)
  * @param poinPengguna Pointer ke array poin pengguna (By Reference)
  */
 void pengembalianBuku(const string& namaPengembali, int idxUser, int idxBuku, int& poinUser) {
-    // Cek apakah user benar-benar meminjam buku ini?
+    
+    // Validasi Matrix: Cek apakah user benar-benar meminjam buku ini?
     if (riwayatPeminjaman[idxUser][idxBuku] == 1) {
-    // Kriteria A: Aturan/Kebijakan (Percabangan)
+        
+        // Kriteria A: Aturan/Kebijakan (Percabangan)
         if (dataBuku[idxBuku][KOLOM_STOK] < MAX_STOK) {
             // Tambah Stok Buku
             dataBuku[idxBuku][KOLOM_STOK]++;
+        } else {
+             cout << "\n[WARNING] Stok buku sudah penuh (" << MAX_STOK << "). Tidak perlu penambahan.\n"; // Flowchart: 'Stok sudah penuh'
         }
+
         // Kurangi Jumlah Dipinjam (Asumsi buku ini sebelumnya dipinjam)
         if (dataBuku[idxBuku][KOLOM_DIPINJAM] > 0) {
             dataBuku[idxBuku][KOLOM_DIPINJAM]--;
         }
+        
         // Tambah Poin Pengguna (Gamifikasi)
         poinUser += 5; // Poin tambahan untuk pengembalian tepat waktu
         
@@ -179,8 +191,8 @@ void pengembalianBuku(const string& namaPengembali, int idxUser, int idxBuku, in
         cout << "  - Anda mendapatkan +5 Poin tambahan!\n";
         cout << "  - Total Poin Anda saat ini: " << poinUser << "\n";
         cout << "  - Stok " << judulBuku[idxBuku] << " kini: " << dataBuku[idxBuku][KOLOM_STOK] << "\n";
+
     } else {
-        cout << "\n[WARNING] Stok buku sudah penuh (" << MAX_STOK << "). Tidak perlu penambahan.\n"; // Flowchart: 'Stok sudah penuh'
         // Jika user tidak pernah meminjam buku ini
         cout << "\n[GAGAL] Validasi Ditolak!\n";
         cout << "Data mencatat bahwa " << namaPengembali << " TIDAK sedang meminjam buku ini.\n";
@@ -292,7 +304,7 @@ int main() {
                 idxUser = sequentialSearchUser(inputNamaUser);
                 
                 if (idxBuku != -1 && idxUser != -1) {
-                    // Panggil fungsi Peminjaman (dengan parameter by reference untuk Poin Pengguna)
+                    // Tambahkan idxUser sebagai parameter
                     peminjamanBuku(inputNamaUser, idxUser, idxBuku, poinPengguna[idxUser]);
                 } else if (idxBuku == -1) {
                     cout << "[ERROR] Buku dengan judul '" << inputJudul << "' tidak ditemukan.\n";
@@ -312,7 +324,7 @@ int main() {
                 idxUser = sequentialSearchUser(inputNamaUser);
                 
                 if (idxBuku != -1 && idxUser != -1) {
-                    // Panggil fungsi Pengembalian (dengan parameter by reference untuk Poin Pengguna)
+                    // Tambahkan idxUser sebagai parameter
                     pengembalianBuku(inputNamaUser, idxUser, idxBuku, poinPengguna[idxUser]);
                 } else if (idxBuku == -1) {
                     cout << "[ERROR] Buku dengan judul '" << inputJudul << "' tidak ditemukan.\n";
